@@ -90,6 +90,108 @@ class VannaBase(ABC):
 
         return f"Respond in the {self.language} language."
 
+    def generate_dimension(self, question: str, **kwargs) -> str:
+        if self.config is not None:
+            initial_prompt = self.config.get("initial_prompt", None)
+        else:
+            initial_prompt = ""
+
+        ddl_list = self.get_related_ddl(question, **kwargs)
+        doc_list = self.get_related_documentation(question, **kwargs)
+
+        prompt = self.get_dimension_prompt(
+            question=question,
+            initial_prompt=initial_prompt,
+            ddl_list=ddl_list,
+            doc_list=doc_list,
+            **kwargs,
+        )
+
+        print("SQL prompt is:", prompt)
+        llm_response = self.submit_prompt(prompt, **kwargs)
+        print("get response fro LLM, response body is:",llm_response)
+
+        match = re.search(r'\{.*}', llm_response, re.DOTALL)
+        if match:
+            extracted_json_string = match.group(0)
+            json_string_no_newlines = extracted_json_string.replace('\n', '')
+            return json_string_no_newlines
+
+        return ""
+
+    def get_dimension_prompt(
+        self,
+        question: str,
+        initial_prompt: str,
+        ddl_list: list,
+        doc_list: list,
+        **kwargs,
+    ):
+        if initial_prompt is None:
+            initial_prompt = """You are an expert in converting natural
+            language business intelligence analysis requirements into a
+            domain-specific language (DSL). Extract metric, dimension, join,
+            and filtering information, then output in JSON format with the
+            following structure: ```json { "chart_type": "chart_type_name",
+            "metrics": [ { "table_name": "table_name", "column_name":
+            "metric_column_name_or_subquery", "dataType": "string" } ],
+            "dimensions": [ { "table_name": "table_name", "column_name":
+            "dimension_column_name_or_subquery", "dataType": "string" } ],
+            "joins": [ { "left_table": "left_table_name_or_subquery",
+            "right_table": "right_table_name_or_subquery", "join_type":
+            "join_type", "on_condition": "join_condition" } ], "order_by":
+            "sorting_column_name_or_subquery", "desc": "sorting_order",
+            "limit": "limit_value", "filters": [ { "condition":
+            "filter_condition_or_subquery" } ] } Fields to note: 1.
+            chart_type: Recommended chart types based on extracted metrics
+            and dimensions. 2. metrics: List of metrics. Leave empty if
+            unavailable. 3. dimensions: List of dimensions. Leave empty if
+            unavailable. 4. joins: List of table joins. Leave empty if
+            unavailable. 5. order_by: Sorting field name or subquery. Leave
+            empty if unavailable. 6. desc: Sorting order. Leave empty if
+            unavailable. 7. limit: Limit value. Leave empty if unavailable.
+            8. filters: List of filters. Leave empty if unavailable. Ensure
+            the JSON output strictly follows the structure and includes only
+            necessary fields based on the user's query intent. The generated
+            DSL should be directly usable in SQL without additional
+            modifications. If extraction is not possible, consider
+            generating SQL first and then extracting the information."""
+
+        initial_prompt = self.add_ddl_to_prompt(
+            initial_prompt, ddl_list, max_tokens=self.max_tokens
+        )
+
+        if self.static_documentation != "":
+            doc_list.append(self.static_documentation)
+
+        initial_prompt = self.add_documentation_to_prompt(
+            initial_prompt, doc_list, max_tokens=self.max_tokens
+        )
+
+        initial_prompt += (
+              "===Response Guidelines \n"
+              "1. Accurately Understand User Intent: Carefully analyze the "
+              "natural language input from the user to accurately extract "
+              "the metric information. \n"
+              "2. Use Standard DSL Terminology: Employ common terminology "
+              "used in the BI analysis domain to describe metrics and "
+              "aggregation methods. \n"
+              "3. Maintain a Concise and Readable JSON Format: Use a clear "
+              "hierarchical structure and appropriate indentation to make "
+              "the output JSON format easy to read and understand. \n"
+              "4. Avoid Unnecessary Associations: Do not generate "
+              "dimensions, order_by, or filter conditions that are unrelated "
+              "to the user's intent.\n"
+              f"5. Provide Necessary Explanations and Clarifications: "
+              f"Include explanatory text in the output to help users "
+              f"understand the meaning of the DSL.\n"
+        )
+
+        message_log = [self.system_message(initial_prompt),
+                       self.user_message(question)]
+
+        return message_log
+
     def generate_sql(self, question: str, allow_llm_to_see_data=False, **kwargs) -> str:
         """
         Example:

@@ -987,6 +987,38 @@ class VannaFlaskAPI:
                     }
                 )
 
+        @self.flask_app.route("/api/v0/generate_dimension", methods=["GET"])
+        @self.requires_auth
+        def generate_dimension(user: any):
+            question = flask.request.args.get("question")
+
+            if question is None:
+                return jsonify({"type": "error",
+                                "error": "No question provided"})
+
+            id = self.cache.generate_id(question=question)
+            dimension = vn.generate_dimension(question=question)
+
+            self.cache.set(id=id, field="question", value=question)
+            self.cache.set(id=id, field="dimension", value=dimension)
+
+            if dimension == "":
+                return jsonify(
+                    {
+                        "type": "text",
+                        "id": id,
+                        "text": "no dimension found",
+                    }
+                )
+            else:
+                return jsonify(
+                  {
+                      "type": "json",
+                      "id": id,
+                      "json": dimension,
+                  }
+                )
+
         @self.flask_app.route("/api/v0/generate_summary", methods=["GET"])
         @self.requires_auth
         @self.requires_cache(["df", "question"])
