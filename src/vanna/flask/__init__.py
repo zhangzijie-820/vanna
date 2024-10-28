@@ -1007,7 +1007,7 @@ class VannaFlaskAPI:
                     {
                         "type": "text",
                         "id": id,
-                        "text": "no dimension found",
+                        "text": "no dimension and metric found",
                     }
                 )
             else:
