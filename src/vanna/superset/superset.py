@@ -10,26 +10,6 @@ class SuperSetConfig:
     password: str
 
 
-# if __name__ == "__main__":
-#    config = SuperSetConfig(
-#        superset_url="http://172.21.84.134:9000",
-#        username="admin",
-#        password="admin"
-#    )
-#    superset_api = SuperSet_API(config)
-#    access_token = superset_api.login()
-#    if access_token:
-#        print(f"Access Token: {access_token}")
-#    else:
-#        print("Failed to get access token.")
-#
-#    db_url = "postgresql://xxxx:xxxx@192.168.1.1:5432/xxxx"
-#    db_id = superset_api.create_database(db_url, access_token)
-
-#    if db_id:
-#        print(f"Database created successfully with ID: {db_id}")
-#    else:
-#        print("Failed to create database.")
 class SuperSet_API:
     def __init__(self, cfg: SuperSetConfig):
         self.cfg = cfg
