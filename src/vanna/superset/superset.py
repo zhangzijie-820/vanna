@@ -1,6 +1,4 @@
-import json
 import requests
-from urllib.parse import quote
 from dataclasses import dataclass
 
 
@@ -30,11 +28,9 @@ class SuperSet_API:
         if response.status_code == 200:
             response_data = response.json()
             token = response_data.get("access_token")
-            return token
+            return token, None
         else:
-            print(f"Login failed with status code {response.status_code}")
-            print(response.text)
-            return None
+            return None, f"Login failed with status code {response.status_code}, error message is {response.text}"
 
     # 获取database
     def get_database_with_name(self, database_url, token):
@@ -51,15 +47,11 @@ class SuperSet_API:
             response_data = response.json()
             count = response_data.get("count")
             if count == 0:
-                return None
+                return None, None
             else:
-                return response_data.get("ids")[0]
+                return response_data.get("ids")[0], None
         else:
-            print(
-                f"Get databases failed with status code "
-                f"{response.status_code}")
-            print(response.text)
-            return None
+            return None, f"Get databases failed with status code {response.status_code}, error message is {response.text}"
 
     # 从database_url中创建database
     def create_database(self, database_url, token):
@@ -82,17 +74,13 @@ class SuperSet_API:
 
         if response.status_code == 200:
             response_data = response.json()
-            return response_data.get("id")
+            return response_data.get("id"), None
         else:
-            print(
-                f"Create database failed with status code "
-                f"{response.status_code}")
-            print(response.text)
-            return None
+            return None, f"Create database failed with status code {response.status_code}, error message is {response.text}"
 
     # 从table_name, database_id获取dataset
-    def get_dataset_with_name(self, table_name, database_id, token):
-        get_databases_url = f"{self.cfg.superset_url}api/v1/dataset/?q=(filters:!((col:table_name,opr:ct,value:{table_name}),(col:database,opr:rel_o_m,value:{database_id})),order_column:changed_on_delta_humanized,order_direction:desc,page:0,page_size:25)"
+    def get_dataset_with_name(self, table_name, schema, database_id, token):
+        get_databases_url = f"{self.cfg.superset_url}/api/v1/dataset/?q=(filters:!((col:table_name,opr:ct,value:{table_name}),(col:database,opr:rel_o_m,value:{database_id}),(col:schema,opr:eq,value:{schema})),order_column:changed_on_delta_humanized,order_direction:desc,page:0,page_size:25)"
 
         headers = {
           "Authorization": f"Bearer {token}"
@@ -103,15 +91,11 @@ class SuperSet_API:
             response_data = response.json()
             count = response_data.get("count")
             if count == 0:
-                return None
+                return None, None
             else:
-                return response_data.get("ids")[0]
+                return response_data.get("ids")[0], None
         else:
-            print(
-                f"Get datasets failed with status code "
-                f"{response.status_code}")
-            print(response.text)
-            return None
+            return None,  f"Get datasets failed with status code {response.status_code}, error message is {response.text}"
 
     # 创建dataset
     def create_dataset_with_table(self, database_id, schema, table_name, token):
@@ -132,10 +116,6 @@ class SuperSet_API:
 
         if response.status_code == 200:
             response_data = response.json()
-            return response_data.get("id")
+            return response_data.get("id"), None
         else:
-            print(
-                f"Create dataset failed with status code "
-                f"{response.status_code}")
-            print(response.text)
-            return None
+            return None, f"Create dataset failed with status code {response.status_code}, error message is {response.text}"

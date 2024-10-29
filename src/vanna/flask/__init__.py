@@ -16,6 +16,9 @@ from flask_sock import Sock
 from ..base import VannaBase
 from .assets import css_content, html_content, js_content
 from .auth import AuthInterface, NoAuth
+from ..superset import SuperSetConfig
+from ..superset import SuperSet_API
+from src.config.config import global_cfg
 
 
 class Cache(ABC):
@@ -984,6 +987,137 @@ class VannaFlaskAPI:
                         "id": id,
                         "questions": [],
                         "header": "Followup Questions can be enabled if you set allow_llm_to_see_data=True",
+                    }
+                )
+
+        @self.flask_app.route("/api/v0/create_dataset", methods=["POST"])
+        @self.requires_auth
+        def create_dataset(user: any):
+            url = flask.request.json.get("superset_url")
+            db_id = flask.request.json.get("database_id")
+            schema = flask.request.json.get("schema")
+            table_name = flask.request.json.get("table_name")
+            access_token = flask.request.json.get("access_token")
+
+            config = SuperSetConfig(
+                superset_url=url,
+                username="",
+                password=""
+            )
+
+            superset_api = SuperSet_API(config)
+            db_set_id, error = superset_api.get_dataset_with_name(table_name, schema, db_id, access_token)
+            if db_set_id is not None:
+                return jsonify(
+                    {
+                        "type": "txt",
+                        "txt": f"{db_set_id}"
+                    }
+                )
+            elif db_set_id is None and error is None:
+                db_set_id, error = superset_api.create_dataset_with_table(db_set_id,schema,table_name,access_token)
+                if db_id is not None:
+                    return jsonify(
+                        {
+                            "type": "txt",
+                            "txt": f"{db_set_id}",
+                        }
+                    )
+                else:
+                    return jsonify(
+                        {
+                            "type": "error",
+                            "error": error,
+                        }
+                    )
+            elif db_set_id is None and error is not None:
+                return jsonify(
+                    {
+                        "type": "error",
+                        "error": error
+                    }
+                )
+
+        @self.flask_app.route("/api/v0/create_db", methods=["POST"])
+        @self.requires_auth
+        def create_db(user: any):
+            url = flask.request.json.get("superset_url")
+            access_token = flask.request.json.get("access_token")
+
+            config = SuperSetConfig(
+              superset_url=url,
+              username="",
+              password="",
+            )
+
+            superset_api = SuperSet_API(config)
+            databases = f"{global_cfg.dbtype}://{global_cfg.user}:{global_cfg.password}@{global_cfg.host}:{global_cfg.port}"
+            if global_cfg.dbtype == "hive":
+                databases = databases + "/?auth=CUSTOM"
+
+            print(f"create database url is {databases}")
+
+            db_id, error_msg = superset_api.get_database_with_name(databases, access_token)
+            if db_id is not None:
+                return jsonify(
+                    {
+                        "type": "txt",
+                        "txt": f"{db_id}",
+                    }
+                )
+            elif db_id is None and error_msg is None:
+                db_id, error_msg = superset_api.create_database(databases, access_token)
+                if db_id is not None:
+                    return jsonify(
+                        {
+                            "type": "txt",
+                            "txt": f"{db_id}",
+                        }
+                    )
+                else:
+                    return jsonify(
+                        {
+                             "type": "error",
+                             "error": error_msg,
+                        }
+                    )
+            elif db_id is None and error_msg is not None:
+                return jsonify(
+                    {
+                        "type": "error",
+                        "error": error_msg
+
+                    }
+                )
+
+        @self.flask_app.route("/api/v0/login_superset", methods=["POST"])
+        @self.requires_auth
+        def login_superset(user: any):
+            url = flask.request.json.get("superset_url")
+            user_name = flask.request.json.get("name")
+            password = flask.request.json.get("password")
+
+            config = SuperSetConfig(
+                superset_url=url,
+                username=user_name,
+                password=password,
+            )
+
+            superset_api = SuperSet_API(config)
+            access_token, error_msg = superset_api.login()
+
+            if access_token:
+                return jsonify(
+                    {
+                        "type": "text",
+                        "text": access_token,
+                    }
+                )
+            else:
+                return jsonify(
+                    {
+                        "type": "error",
+                        "error": error_msg,
                     }
                 )
 
