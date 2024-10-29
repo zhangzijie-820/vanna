@@ -139,29 +139,3 @@ class SuperSet_API:
                 f"{response.status_code}")
             print(response.text)
             return None
-
-    def trans_metric_to_url(self, viz_type_param, datasource_param, metric_param, group_by_param, time_grain_sqla_param):
-        columns = []
-
-        for m in metric_param.split(','):
-            columns.append({
-                "column_name": m,
-                "type": "metric"
-            })
-
-        for g in group_by_param.split(','):
-            columns.append({
-                "column_name": g,
-                "type": "groupby"
-            })
-
-        obj = {
-            "columns": columns,
-            "time_grain_sqla": time_grain_sqla_param
-        }
-
-        ai_metrics = quote(json.dumps(obj))
-        url = f"{self.cfg.superset_url}/explore/"
-
-        ret = f"{url}?viz_type={viz_type_param}&datasource={datasource_param}&embedded_ai=true&ai_metrics={ai_metrics}&standalone=1"
-        return ret
