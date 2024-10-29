@@ -128,32 +128,21 @@ class VannaBase(ABC):
         **kwargs,
     ):
         if initial_prompt is None:
-            initial_prompt = """You are an expert in converting natural
-            language business intelligence analysis requirements into a
-            domain-specific language (DSL). Extract metric, dimension, join,
-            and filtering information, then output in JSON format with the
-            following structure: ```json { "chart_type": "chart_type_name",
-            "metrics": [ { "table_name": "table_name", "column_name":
-            "metric_column_name_or_subquery", "dataType": "string" } ],
-            "dimensions": [ { "table_name": "table_name", "column_name":
-            "dimension_column_name_or_subquery", "dataType": "string" } ],
-            "joins": [ { "left_table": "left_table_name_or_subquery",
-            "right_table": "right_table_name_or_subquery", "join_type":
-            "join_type", "on_condition": "join_condition" } ], "order_by":
-            "sorting_column_name_or_subquery", "desc": "sorting_order",
-            "limit": "limit_value", "filters": [ { "condition":
-            "filter_condition_or_subquery" } ] } Fields to note: 1.
-            chart_type: Recommended chart types based on extracted metrics
-            and dimensions. 2. metrics: List of metrics. Leave empty if
-            unavailable. 3. dimensions: List of dimensions. Leave empty if
-            unavailable. 4. joins: List of table joins. Leave empty if
-            unavailable. 5. order_by: Sorting field name or subquery. Leave
-            empty if unavailable. 6. desc: Sorting order. Leave empty if
-            unavailable. 7. limit: Limit value. Leave empty if unavailable.
-            8. filters: List of filters. Leave empty if unavailable. Ensure
-            the JSON output strictly follows the structure and includes only
-            necessary fields based on the user's query intent. The generated
-            DSL should be directly usable in SQL without additional
+            initial_prompt = """
+            ===You are an expert in converting natural language business intelligence analysis requirements into a domain-specific language (DSL). Extract metric, dimension
+            and filtering information, then output in JSON format with the following structure:
+            {"chart_type": "chart_type_name", "schema_name": "schema_name", "table_name": "table_name",
+            "metrics":[{"column_name": "metric_column_name_or_subquery", "dataType": "string" }],
+            "dimensions":[{"column_name": "dimension_column_name_or_subquery", "dataType": "string"}],
+            "order_by": "sorting_column_name_or_subquery",
+            "desc": "sorting_order",
+            "limit": "limit_value",
+            "filters": "filter_condition_or_subquery"}
+            ===Fields to note:
+            Ensure the JSON output strictly follows the structure and includes only
+            necessary fields based on the user's query intent.
+            8. schema_name: schema name.
+            The generated DSL should be directly usable in SQL without additional
             modifications. If extraction is not possible, consider
             generating SQL first and then extracting the information."""
 

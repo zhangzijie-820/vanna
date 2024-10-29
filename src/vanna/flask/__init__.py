@@ -1121,6 +1121,35 @@ class VannaFlaskAPI:
                     }
                 )
 
+        @self.flask_app.route("/api/v0/export_info", methods=["POST"])
+        @self.requires_auth
+        def export_info(user: any):
+            schema_name = flask.request.json.get("schema_name")
+            table_name = flask.request.json.get("table_name")
+            chart_type = flask.request.json.get("chart_type")
+            desc = flask.request.json.get("desc")
+            limit = flask.request.json.get("limit")
+            filters = flask.request.json.get("filters")
+
+            metrics = [metric['column_name'] for metric in flask.request.json['metrics']]
+            metrics_str = ', '.join(metrics)
+
+            dimensions = [dimension['column_name'] for dimension in flask.request.json['dimensions']]
+            dimensions_str = ', '.join(dimensions)
+
+            return jsonify(
+                {
+                    "schema_name": schema_name,
+                    "table_name": table_name,
+                    "chart_type": chart_type,
+                    "metric": metrics_str,
+                    "dimension": dimensions_str,
+                    "desc": desc,
+                    "limit": limit,
+                    "filters": filters
+                }
+            )
+
         @self.flask_app.route("/api/v0/generate_dimension", methods=["GET"])
         @self.requires_auth
         def generate_dimension(user: any):
