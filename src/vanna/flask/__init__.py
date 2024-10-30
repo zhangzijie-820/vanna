@@ -992,6 +992,8 @@ class VannaFlaskAPI:
 
         @self.flask_app.route("/api/v0/create_dataset", methods=["POST"])
         @self.requires_auth
+        # 入口: superset的相关信息，database_id，schema和table_name
+        # 出口： dataset_id
         def create_dataset(user: any):
             url = flask.request.json.get("superset_url")
             db_id = flask.request.json.get("database_id")
@@ -1015,8 +1017,8 @@ class VannaFlaskAPI:
                     }
                 )
             elif db_set_id is None and error is None:
-                db_set_id, error = superset_api.create_dataset_with_table(db_set_id,schema,table_name,access_token)
-                if db_id is not None:
+                db_set_id, error = superset_api.create_dataset_with_table(db_id, schema, table_name, access_token)
+                if db_set_id is not None:
                     return jsonify(
                         {
                             "type": "txt",
@@ -1040,6 +1042,8 @@ class VannaFlaskAPI:
 
         @self.flask_app.route("/api/v0/create_db", methods=["POST"])
         @self.requires_auth
+        # 入口: superset的相关信息
+        # 出口： database_id
         def create_db(user: any):
             url = flask.request.json.get("superset_url")
             access_token = flask.request.json.get("access_token")
@@ -1091,6 +1095,8 @@ class VannaFlaskAPI:
                 )
 
         @self.flask_app.route("/api/v0/login_superset", methods=["POST"])
+        # 入口: superset的相关信息
+        # 出口： token
         @self.requires_auth
         def login_superset(user: any):
             url = flask.request.json.get("superset_url")
@@ -1123,6 +1129,8 @@ class VannaFlaskAPI:
 
         @self.flask_app.route("/api/v0/export_info", methods=["POST"])
         @self.requires_auth
+        # 入口: LLM吐出来的指标，维度信息
+        # 出口： 整理过后的指标，维度信息，后续在agent builder上调用对应的API获取dataset id
         def export_info(user: any):
             schema_name = flask.request.json.get("schema_name")
             table_name = flask.request.json.get("table_name")
@@ -1146,11 +1154,14 @@ class VannaFlaskAPI:
                     "dimension": dimensions_str,
                     "desc": desc,
                     "limit": limit,
-                    "filters": filters
+                    "filters": filters,
+                    "datasource_type": "table"
                 }
             )
 
         @self.flask_app.route("/api/v0/generate_dimension", methods=["GET"])
+        # 入口: 自然语言
+        # 出口： 大模型吐出来的指标和维度信息，有缓存，可以获取历史问题以及对应的维度和指标信息
         @self.requires_auth
         def generate_dimension(user: any):
             question = flask.request.args.get("question")
@@ -1229,6 +1240,25 @@ class VannaFlaskAPI:
                         "text": "Summarization can be enabled if you set allow_llm_to_see_data=True",
                     }
                 )
+
+        @self.flask_app.route("/api/v0/load_dimension", methods=["GET"])
+        @self.requires_auth
+        @self.requires_cache(
+          ["question"],
+          optional_fields=["dimension"]
+        )
+        def load_dimension(user: any, id: str, question, dimension):
+            try:
+                return jsonify(
+                    {
+                        "type": "question_cache",
+                        "id": id,
+                        "question": question,
+                        "dimension": dimension,
+                    }
+                )
+            except Exception as e:
+                return jsonify({"type": "error", "error": str(e)})
 
         @self.flask_app.route("/api/v0/load_question", methods=["GET"])
         @self.requires_auth

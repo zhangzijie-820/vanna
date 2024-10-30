@@ -72,7 +72,7 @@ class SuperSet_API:
         response = requests.post(create_database_url,
                                  json=payload, headers=headers)
 
-        if response.status_code == 200:
+        if response.status_code == 201:
             response_data = response.json()
             return response_data.get("id"), None
         else:
@@ -114,7 +114,7 @@ class SuperSet_API:
         response = requests.post(create_dataset_url,
                                  json=payload, headers=headers)
 
-        if response.status_code == 200:
+        if response.status_code == 201:
             response_data = response.json()
             return response_data.get("id"), None
         else:
