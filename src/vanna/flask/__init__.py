@@ -16,9 +16,8 @@ from flask_sock import Sock
 from ..base import VannaBase
 from .assets import css_content, html_content, js_content
 from .auth import AuthInterface, NoAuth
-from ..superset import SuperSetConfig
-from ..superset import SuperSet_API
 from src.config.config import global_cfg
+from src.config.config import global_superset_api
 
 
 class Cache(ABC):
@@ -995,20 +994,11 @@ class VannaFlaskAPI:
         # 入口: superset的相关信息，database_id，schema和table_name
         # 出口： dataset_id
         def create_dataset(user: any):
-            url = flask.request.json.get("superset_url")
             db_id = flask.request.json.get("database_id")
             schema = flask.request.json.get("schema")
             table_name = flask.request.json.get("table_name")
-            access_token = flask.request.json.get("access_token")
 
-            config = SuperSetConfig(
-                superset_url=url,
-                username="",
-                password=""
-            )
-
-            superset_api = SuperSet_API(config)
-            db_set_id, error = superset_api.get_dataset_with_name(table_name, schema, db_id, access_token)
+            db_set_id, error = global_superset_api.get_dataset_with_name(table_name, schema, db_id)
             if db_set_id is not None:
                 return jsonify(
                     {
@@ -1017,7 +1007,7 @@ class VannaFlaskAPI:
                     }
                 )
             elif db_set_id is None and error is None:
-                db_set_id, error = superset_api.create_dataset_with_table(db_id, schema, table_name, access_token)
+                db_set_id, error = global_superset_api.create_dataset_with_table(db_id, schema, table_name)
                 if db_set_id is not None:
                     return jsonify(
                         {
@@ -1045,16 +1035,6 @@ class VannaFlaskAPI:
         # 入口: superset的相关信息
         # 出口： database_id
         def create_db(user: any):
-            url = flask.request.json.get("superset_url")
-            access_token = flask.request.json.get("access_token")
-
-            config = SuperSetConfig(
-              superset_url=url,
-              username="",
-              password="",
-            )
-
-            superset_api = SuperSet_API(config)
             databases = f"{global_cfg.dbtype}://{global_cfg.user}:{global_cfg.password}@{global_cfg.host}:{global_cfg.port}"
             if global_cfg.dbtype == "hive":
                 databases = databases + "/?auth=CUSTOM"
@@ -1063,7 +1043,7 @@ class VannaFlaskAPI:
 
             print(f"create database url is {databases}")
 
-            db_id, error_msg = superset_api.get_database_with_name(databases, access_token)
+            db_id, error_msg = global_superset_api.get_database_with_name(databases)
             if db_id is not None:
                 return jsonify(
                     {
@@ -1072,7 +1052,7 @@ class VannaFlaskAPI:
                     }
                 )
             elif db_id is None and error_msg is None:
-                db_id, error_msg = superset_api.create_database(databases, access_token)
+                db_id, error_msg = global_superset_api.create_database(databases)
                 if db_id is not None:
                     return jsonify(
                         {
@@ -1101,19 +1081,7 @@ class VannaFlaskAPI:
         # 出口： token
         @self.requires_auth
         def login_superset(user: any):
-            url = flask.request.json.get("superset_url")
-            user_name = flask.request.json.get("name")
-            password = flask.request.json.get("password")
-
-            config = SuperSetConfig(
-                superset_url=url,
-                username=user_name,
-                password=password,
-            )
-
-            superset_api = SuperSet_API(config)
-            access_token, error_msg = superset_api.login()
-
+            access_token, error_msg = global_superset_api.login()
             if access_token:
                 return jsonify(
                     {
@@ -1134,13 +1102,14 @@ class VannaFlaskAPI:
         # 入口: LLM吐出来的指标，维度信息
         # 出口： 整理过后的指标，维度信息，后续在agent builder上调用对应的API获取dataset id
         def export_info(user: any):
+            dataset_id = flask.request.args.get("dataset_id")
             schema_name = flask.request.json.get("schema_name")
             table_name = flask.request.json.get("table_name")
             chart_type = flask.request.json.get("chart_type")
             desc = flask.request.json.get("desc")
             limit = flask.request.json.get("limit")
             filters = flask.request.json.get("filters")
-            dataset_id = flask.request.args.get("dataset_id")
+            order_by = flask.request.json.get("order_by")
 
             metrics = [metric['column_name'] for metric in flask.request.json['metrics']]
             metrics_str = ', '.join(metrics)
@@ -1157,11 +1126,93 @@ class VannaFlaskAPI:
                     "dimension": dimensions_str,
                     "desc": desc,
                     "limit": limit,
-                    "filters": filters,
+                    "order_by": order_by.get("column_name"),
+                    "filters": filters.get("column_name"),
                     "datasource_type": "table",
                     "dataset_id": dataset_id
                 }
             )
+
+        @self.flask_app.route("/api/v0/get_sql_from_superset", methods=["POST"])
+        @self.requires_auth
+        def get_sql_from_superset(user: any):
+            dataset_id = flask.request.args.get("dataset_id")
+            filters = flask.request.json.get("filters")
+            metrics = flask.request.json.get("metrics")
+            order_by = flask.request.json.get("order_by")
+            dimensions = flask.request.json.get("dimensions")
+            limit = flask.request.json.get("limit")
+            desc = flask.request.json.get("desc")
+            desc_bool = desc.lower() == "true"
+
+            if "column_name" in filters:
+                where_clause = filters["column_name"]
+            else:
+                where_clause = ""
+
+            if "column_name" in order_by:
+                order_by_clause = order_by["column_name"]
+                order_by_alis = order_by["alis"]
+            else:
+                order_by_clause = ""
+                order_by_alis = ""
+
+            output_data = {
+                "datasource": {
+                    "id": dataset_id,
+                    "type": "table"
+                },
+                "queries": [
+                    {
+                         "extras": {
+                         "where": where_clause
+                    },
+                    "metrics": [
+                        {
+                              "expressionType": "SQL",
+                              "sqlExpression": metric["column_name"],
+                               "label": metric["alis"]
+                        } for metric in metrics
+                    ],
+                    "orderby": [
+                        [
+                            {
+                                "expressionType": "SQL",
+                                 "sqlExpression": order_by_clause,
+                                 "label": order_by_alis
+                           },
+                           desc_bool
+                        ]
+                     ],
+                     "groupby": [
+                          {
+                              "expressionType": "SQL",
+                              "sqlExpression": dimension["column_name"],
+                              "label": dimension["alis"]
+                          } for dimension in dimensions
+                     ],
+                     "row_limit": int(limit)
+                    }
+                ],
+                "result_format": "json",
+                 "result_type": "full"
+            }
+
+            sql, error_msg = global_superset_api.get_sql_and_data_from_superset(output_data)
+            if error_msg is not None:
+                return jsonify(
+                    {
+                        "type": "error",
+                         "error": error_msg,
+                    }
+                )
+            else:
+                return jsonify(
+                    {
+                        "type": "sql",
+                        "sql": sql,
+                    }
+                )
 
         @self.flask_app.route("/api/v0/generate_dimension", methods=["GET"])
         # 入口: 自然语言

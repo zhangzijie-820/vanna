@@ -132,16 +132,15 @@ class VannaBase(ABC):
             ===You are an expert in converting natural language business intelligence analysis requirements into a domain-specific language (DSL). Extract metric, dimension
             and filtering information, then output in JSON format with the following structure:
             {"chart_type": "Recommend chart types based on metrics and dimensions", "schema_name": "schema_name", "table_name": "table_name",
-            "metrics":[{"column_name": "metric_column_name_or_subquery", "dataType": "string" }],
-            "dimensions":[{"column_name": "dimension_column_name_or_subquery", "dataType": "string"}],
-            "order_by": "sorting_column_name_or_subquery",
+            "metrics":[{"column_name": "metric_column_name_or_subquery", "dataType": "string", "alis":"metric_column_name_or_subquery alis name"}],
+            "dimensions":[{"column_name": "dimension_column_name_or_subquery", "dataType": "string", "alis":"dimension_column_name_or_subquery alis name"}],
+            "order_by": {"column_name": "sorting_column_name_or_subquery", "dataType": "string", "alis":"sorting_column_name_or_subquery alis name"},
             "desc": "sorting_order",
             "limit": "limit_value",
-            "filters": "filter_condition_or_subquery"}
+            "filters": {"column_name": "filter_condition_or_subquery", "dataType": "string", "alis":"filter_condition_or_subquery alis name"}}
             ===Fields to note:
             Ensure the JSON output strictly follows the structure and includes only
             necessary fields based on the user's query intent.
-            8. schema_name: schema name.
             The generated DSL should be directly usable in SQL without additional
             modifications. If extraction is not possible, consider
             generating SQL first and then extracting the information."""

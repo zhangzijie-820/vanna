@@ -1,10 +1,13 @@
 import argparse
 import configparser
+from src.vanna.superset import SuperSetConfig
+from src.vanna.superset import SuperSet_API
 
 
 class GlobalConfig:
     def __init__(self, dbtype=None, host=None, port=None, user=None, password=None, db=None,
-                 temperature=None, apikey=None, baseurl=None, model=None):
+                 temperature=None, apikey=None, baseurl=None, model=None, superset_url=None,
+                 superset_user=None, superset_password=None):
         self.dbtype = dbtype
         self.host = host
         self.port = port
@@ -15,12 +18,15 @@ class GlobalConfig:
         self.baseurl = baseurl
         self.model = model
         self.temperature = temperature
+        self.superset_url = superset_url
+        self.superset_user = superset_user
+        self.superset_password = superset_password
 
     def __repr__(self):
-        # 为了方便打印，我们可以定义__repr__方法
         return (f"GlobalConfig(dbtype={self.dbtype}, host={self.host}, port={self.port}, user={self.user}, "
                 f"password={self.password}, db={self.db},temperature={self.temperature}, apikey={self.apikey}, "
-                f"baseurl={self.baseurl}, model={self.model})")
+                f"baseurl={self.baseurl}, model={self.model}, superset_url={self.superset_url}, "
+                f"superset_user={self.superset_user}, superset_password={self.superset_password})")
 
     def parse_ini_file(self, ini_file_path):
         """从INI文件解析配置参数"""
@@ -33,6 +39,7 @@ class GlobalConfig:
 
         settings = config['settings']
         deepseek = config['deepSeekSet']
+        superset = config['superset']
 
         self.dbtype = settings.get('dbtype', fallback=None)
         self.host = settings.get('host', fallback=None)
@@ -44,6 +51,9 @@ class GlobalConfig:
         self.apikey = deepseek.get('apikey', fallback=None)
         self.model = deepseek.get('model', fallback=None)
         self.temperature = deepseek.get('temperature', fallback=None)
+        self.temperature = superset.get('superset_url', fallback=None)
+        self.temperature = superset.get('superset_user', fallback=None)
+        self.temperature = superset.get('superset_password', fallback=None)
 
     def parse_command_line_args(self):
         """从命令行解析参数"""
@@ -62,9 +72,11 @@ class GlobalConfig:
                                  '0 means Lowest sensitivity')
         parser.add_argument('--apikey', type=str, help='api key for deepseek LLM, for example:"sk-xxxxxxxxxxxxxx"')
         parser.add_argument('--model', type=str, help='model name for deepseek, for example:"deepseek-chat"')
+        parser.add_argument('--superset_url', type=str, help='url of superset, for example:"http://127.0.0.1:8080"')
+        parser.add_argument('--superset_user', type=str, help='user name of superset, for example: "admin"')
+        parser.add_argument('--superset_password', type=str, help='password of superset, for exampl: "admin"')
 
         args = parser.parse_args()
-
         self.dbtype = args.dbtype
         self.host = args.host
         self.port = args.port
@@ -75,7 +87,12 @@ class GlobalConfig:
         self.apikey = args.apikey
         self.model = args.model
         self.temperature = args.temperature
+        self.superset_url = args.superset_url
+        self.superset_user = args.superset_user
+        self.superset_password = args.superset_password
 
 
 global_cfg = GlobalConfig()
+
+global_superset_api = SuperSet_API()
 

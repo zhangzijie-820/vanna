@@ -8,6 +8,8 @@ from src.vanna.openai import OpenAI_Chat
 from src.util.path import check_directory_exists
 
 from src.config.config import global_cfg
+from src.config.config import global_superset_api
+from src.vanna.superset import SuperSetConfig
 from src.db.sql import run_sql
 from src.db.hive import HiveConnector
 
@@ -108,6 +110,12 @@ def main():
     else:
         print("unsupported database type:", global_cfg.dbtype)
         sys.exit(2)
+
+    global_superset_api.set_cfg(cfg=SuperSetConfig(
+        superset_url=global_cfg.superset_url,
+        username=global_cfg.superset_user,
+        password=global_cfg.password
+    ))
 
     VannaFlaskApp(vn, allow_llm_to_see_data=True).run()
 
