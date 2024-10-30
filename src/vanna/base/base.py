@@ -131,7 +131,7 @@ class VannaBase(ABC):
             initial_prompt = """
             ===You are an expert in converting natural language business intelligence analysis requirements into a domain-specific language (DSL). Extract metric, dimension
             and filtering information, then output in JSON format with the following structure:
-            {"chart_type": "chart_type_name", "schema_name": "schema_name", "table_name": "table_name",
+            {"chart_type": "Recommend chart types based on metrics and dimensions", "schema_name": "schema_name", "table_name": "table_name",
             "metrics":[{"column_name": "metric_column_name_or_subquery", "dataType": "string" }],
             "dimensions":[{"column_name": "dimension_column_name_or_subquery", "dataType": "string"}],
             "order_by": "sorting_column_name_or_subquery",

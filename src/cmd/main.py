@@ -81,7 +81,7 @@ def main():
             print('directory hive-chroma already exist')
         else:
             print('directory pg-chroma has not exist, so create it')
-            os.makedirs("./src/pg-chroma")
+            os.makedirs("./src/hive-chroma")
 
         ai_cfg = {'model': global_cfg.model,
                   'path': './src/hive-chroma',

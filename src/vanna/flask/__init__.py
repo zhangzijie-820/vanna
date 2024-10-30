@@ -1058,6 +1058,8 @@ class VannaFlaskAPI:
             databases = f"{global_cfg.dbtype}://{global_cfg.user}:{global_cfg.password}@{global_cfg.host}:{global_cfg.port}"
             if global_cfg.dbtype == "hive":
                 databases = databases + "/?auth=CUSTOM"
+            else:
+                databases = databases + f"/{global_cfg.db}"
 
             print(f"create database url is {databases}")
 
@@ -1138,6 +1140,7 @@ class VannaFlaskAPI:
             desc = flask.request.json.get("desc")
             limit = flask.request.json.get("limit")
             filters = flask.request.json.get("filters")
+            dataset_id = flask.request.args.get("dataset_id")
 
             metrics = [metric['column_name'] for metric in flask.request.json['metrics']]
             metrics_str = ', '.join(metrics)
@@ -1155,7 +1158,8 @@ class VannaFlaskAPI:
                     "desc": desc,
                     "limit": limit,
                     "filters": filters,
-                    "datasource_type": "table"
+                    "datasource_type": "table",
+                    "dataset_id": dataset_id
                 }
             )
 
