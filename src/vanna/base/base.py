@@ -133,11 +133,11 @@ class VannaBase(ABC):
             and filtering information, then output in JSON format with the following structure:
             {"chart_type": "Recommend chart types based on metrics and dimensions", "schema_name": "schema_name", "table_name": "table_name",
             "metrics":[{"column_name": "metric_column_name_or_subquery", "dataType": "string", "alis":"metric_column_name_or_subquery alis name"}],
-            "dimensions":[{"column_name": "dimension_column_name_or_subquery", "dataType": "string", "alis":"dimension_column_name_or_subquery alis name"}],
-            "order_by": {"column_name": "sorting_column_name_or_subquery", "dataType": "string", "alis":"sorting_column_name_or_subquery alis name"},
+            "dimensions":[{"column_name": "dimension_column_name_or_subquery", "dataType": "string"}],
+            "order_by": {"column_name": "sorting_column_name_or_subquery", "dataType": "string"},
             "desc": "sorting_order",
             "limit": "limit_value",
-            "filters": {"column_name": "filter_condition_or_subquery", "dataType": "string", "alis":"filter_condition_or_subquery alis name"}}
+            "filters": {"column_name": "filter_condition_or_subquery", "dataType": "string"}}
             ===Fields to note:
             Ensure the JSON output strictly follows the structure and includes only
             necessary fields based on the user's query intent.

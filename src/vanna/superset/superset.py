@@ -1,3 +1,5 @@
+import json
+
 import requests
 from dataclasses import dataclass
 
@@ -30,6 +32,8 @@ class SuperSet_API:
             "refresh": True,
             "username": self.cfg.username
         }
+
+        print(payload)
 
         response = requests.post(login_url, json=payload)
         if response.status_code == 200:
@@ -134,6 +138,8 @@ class SuperSet_API:
         headers = {
           "Authorization": f"Bearer {self.token}"
         }
+
+        print(f"Get sql from superset and request payload is {json.dumps(payload, indent=4)}")
 
         response = requests.post(get_sql_and_data_from_superset_url,
                                  json=payload, headers=headers)

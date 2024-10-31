@@ -114,7 +114,7 @@ def main():
     global_superset_api.set_cfg(cfg=SuperSetConfig(
         superset_url=global_cfg.superset_url,
         username=global_cfg.superset_user,
-        password=global_cfg.password
+        password=global_cfg.superset_password
     ))
 
     VannaFlaskApp(vn, allow_llm_to_see_data=True).run()

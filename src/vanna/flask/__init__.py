@@ -1151,21 +1151,23 @@ class VannaFlaskAPI:
             metrics = flask.request.json.get("metrics")
             order_by = flask.request.json.get("order_by")
             dimensions = flask.request.json.get("dimensions")
-            limit = flask.request.json.get("limit")
-            desc = flask.request.json.get("desc")
-            desc_bool = desc.lower() == "true"
 
-            if "column_name" in filters:
+            limit = flask.request.json.get("limit")
+            limit = int(limit) if limit else 50000
+
+            desc = flask.request.json.get("desc")
+            desc_bool = desc.lower() == "true" if desc else False
+
+            if filters and "column_name" in filters:
                 where_clause = filters["column_name"]
             else:
                 where_clause = ""
 
-            if "column_name" in order_by:
+            if order_by and "column_name" in order_by:
                 order_by_clause = order_by["column_name"]
-                order_by_alis = order_by["alis"]
             else:
                 order_by_clause = ""
-                order_by_alis = ""
+                order_by = []
 
             output_data = {
                 "datasource": {
@@ -1189,16 +1191,14 @@ class VannaFlaskAPI:
                             {
                                 "expressionType": "SQL",
                                  "sqlExpression": order_by_clause,
-                                 "label": order_by_alis
                            },
                            desc_bool
                         ]
-                     ],
+                     ] if order_by else [],
                      "groupby": [
                           {
                               "expressionType": "SQL",
                               "sqlExpression": dimension["column_name"],
-                              "label": dimension["alis"]
                           } for dimension in dimensions
                      ],
                      "row_limit": int(limit)
