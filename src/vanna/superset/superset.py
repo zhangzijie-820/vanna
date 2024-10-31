@@ -138,8 +138,8 @@ class SuperSet_API:
         response = requests.post(get_sql_and_data_from_superset_url,
                                  json=payload, headers=headers)
 
-        if response.status_code == 201:
+        if response.status_code == 200:
             response_data = response.json()
-            return response_data.get("query"), None
+            return response_data['result'][0]['query'], None
         else:
             return None, f"Get sql from superset failed with status code {response.status_code}, error message is {response.text}"

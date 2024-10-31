@@ -1117,6 +1117,16 @@ class VannaFlaskAPI:
             dimensions = [dimension['column_name'] for dimension in flask.request.json['dimensions']]
             dimensions_str = ', '.join(dimensions)
 
+            if "column_name" in filters:
+                where_clause = filters["column_name"]
+            else:
+                where_clause = ""
+
+            if "column_name" in order_by:
+                order_by_clause = order_by["column_name"]
+            else:
+                order_by_clause = ""
+
             return jsonify(
                 {
                     "schema_name": schema_name,
@@ -1126,8 +1136,8 @@ class VannaFlaskAPI:
                     "dimension": dimensions_str,
                     "desc": desc,
                     "limit": limit,
-                    "order_by": order_by.get("column_name"),
-                    "filters": filters.get("column_name"),
+                    "order_by": order_by_clause,
+                    "filters": where_clause,
                     "datasource_type": "table",
                     "dataset_id": dataset_id
                 }
