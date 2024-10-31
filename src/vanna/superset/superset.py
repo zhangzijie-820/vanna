@@ -1,5 +1,4 @@
 import json
-
 import requests
 from dataclasses import dataclass
 
@@ -33,7 +32,7 @@ class SuperSet_API:
             "username": self.cfg.username
         }
 
-        print(payload)
+        print(f"Login to superset with body {json.dumps(payload, indent=4)}")
 
         response = requests.post(login_url, json=payload)
         if response.status_code == 200:
@@ -146,6 +145,6 @@ class SuperSet_API:
 
         if response.status_code == 200:
             response_data = response.json()
-            return response_data['result'][0]['query'], None
+            return response_data['result'][0]['query'], response_data['result'][0]['data'], None
         else:
             return None, f"Get sql from superset failed with status code {response.status_code}, error message is {response.text}"

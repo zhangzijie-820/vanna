@@ -1208,7 +1208,7 @@ class VannaFlaskAPI:
                  "result_type": "full"
             }
 
-            sql, error_msg = global_superset_api.get_sql_and_data_from_superset(output_data)
+            sql, data, error_msg = global_superset_api.get_sql_and_data_from_superset(output_data)
             if error_msg is not None:
                 return jsonify(
                     {
@@ -1220,6 +1220,7 @@ class VannaFlaskAPI:
                 return jsonify(
                     {
                         "type": "sql",
+                        "data": data,
                         "sql": sql,
                     }
                 )
