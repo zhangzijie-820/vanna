@@ -1097,60 +1097,18 @@ class VannaFlaskAPI:
                     }
                 )
 
-        @self.flask_app.route("/api/v0/export_info", methods=["POST"])
-        @self.requires_auth
-        # 入口: LLM吐出来的指标，维度信息
-        # 出口： 整理过后的指标，维度信息，后续在agent builder上调用对应的API获取dataset id
-        def export_info(user: any):
-            dataset_id = flask.request.args.get("dataset_id")
-            schema_name = flask.request.json.get("schema_name")
-            table_name = flask.request.json.get("table_name")
-            chart_type = flask.request.json.get("chart_type")
-            desc = flask.request.json.get("desc")
-            limit = flask.request.json.get("limit")
-            filters = flask.request.json.get("filters")
-            order_by = flask.request.json.get("order_by")
-
-            metrics = [metric['column_name'] for metric in flask.request.json['metrics']]
-            metrics_str = ', '.join(metrics)
-
-            dimensions = [dimension['column_name'] for dimension in flask.request.json['dimensions']]
-            dimensions_str = ', '.join(dimensions)
-
-            if "column_name" in filters:
-                where_clause = filters["column_name"]
-            else:
-                where_clause = ""
-
-            if "column_name" in order_by:
-                order_by_clause = order_by["column_name"]
-            else:
-                order_by_clause = ""
-
-            return jsonify(
-                {
-                    "schema_name": schema_name,
-                    "table_name": table_name,
-                    "chart_type": chart_type,
-                    "metric": metrics_str,
-                    "dimension": dimensions_str,
-                    "desc": desc,
-                    "limit": limit,
-                    "order_by": order_by_clause,
-                    "filters": where_clause,
-                    "datasource_type": "table",
-                    "dataset_id": dataset_id
-                }
-            )
-
         @self.flask_app.route("/api/v0/get_sql_from_superset", methods=["POST"])
         @self.requires_auth
         def get_sql_from_superset(user: any):
-            dataset_id = flask.request.args.get("dataset_id")
             filters = flask.request.json.get("filters")
             metrics = flask.request.json.get("metrics")
             order_by = flask.request.json.get("order_by")
             dimensions = flask.request.json.get("dimensions")
+            dataset_id = flask.request.args.get("dataset_id")
+            chart_type = flask.request.json.get("chart_type")
+
+            out_put_json = flask.request.args.get("out_put_json")
+            out_put_json_bool = out_put_json.lower() == "true" if out_put_json else False
 
             limit = flask.request.json.get("limit")
             limit = int(limit) if limit else 50000
@@ -1158,15 +1116,34 @@ class VannaFlaskAPI:
             desc = flask.request.json.get("desc")
             desc_bool = desc.lower() == "true" if desc else False
 
-            if filters and "column_name" in filters:
-                where_clause = filters["column_name"]
+            where_conditions = []
+            having_conditions = []
+            for filter_item in filters:
+                if filter_item['operation'] == 'where':
+                    where_conditions.append(filter_item['column_name'])
+                elif filter_item['operation'] == 'having':
+                    having_conditions.append(filter_item['column_name'])
+
+            if len(where_conditions) == 1:
+                where_clause = where_conditions[0]
+            elif len(where_conditions) > 1:
+                where_clause = ' AND '.join(where_conditions)
             else:
                 where_clause = ""
 
+            if len(having_conditions) == 1:
+                having_clause = having_conditions[0]
+            elif len(having_conditions) > 1:
+                having_clause = ' AND '.join(having_conditions)
+            else:
+                having_clause = ""
+
             if order_by and "column_name" in order_by:
                 order_by_clause = order_by["column_name"]
+                order_by_alis = order_by["alis"]
             else:
                 order_by_clause = ""
+                order_by_alis = ""
                 order_by = []
 
             output_data = {
@@ -1177,36 +1154,48 @@ class VannaFlaskAPI:
                 "queries": [
                     {
                          "extras": {
-                         "where": where_clause
-                    },
-                    "metrics": [
-                        {
-                              "expressionType": "SQL",
-                              "sqlExpression": metric["column_name"],
-                               "label": metric["alis"]
-                        } for metric in metrics
-                    ],
-                    "orderby": [
-                        [
+                             "where": where_clause,
+                             "having": having_clause
+                         },
+                         "metrics": [
                             {
                                 "expressionType": "SQL",
-                                 "sqlExpression": order_by_clause,
-                           },
-                           desc_bool
-                        ]
-                     ] if order_by else [],
-                     "groupby": [
-                          {
-                              "expressionType": "SQL",
-                              "sqlExpression": dimension["column_name"],
-                          } for dimension in dimensions
-                     ],
-                     "row_limit": int(limit)
+                                 "sqlExpression": metric["column_name"],
+                                 "label": metric["alis"]
+                            } for metric in metrics
+                         ],
+                         "orderby": [
+                             [
+                                 {
+                                     "expressionType": "SQL",
+                                     "sqlExpression": order_by_clause,
+                                     "label": order_by_alis,
+                                 },
+                                 desc_bool
+                             ]
+                         ] if order_by else [],
+                         "groupby": [
+                             {
+                                  "expressionType": "SQL",
+                                  "sqlExpression": dimension["column_name"],
+                                  "label": dimension["alis"],
+                             } for dimension in dimensions
+                         ],
+                         "row_limit": int(limit)
                     }
                 ],
                 "result_format": "json",
-                 "result_type": "full"
+                "result_type": "full"
             }
+
+            if out_put_json_bool:
+                output_data["chart_type"] = chart_type
+                return jsonify(
+                   {
+                       "type": "json",
+                       "json": output_data
+                   }
+               )
 
             sql, data, error_msg = global_superset_api.get_sql_and_data_from_superset(output_data)
             if error_msg is not None:

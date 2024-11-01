@@ -147,4 +147,4 @@ class SuperSet_API:
             response_data = response.json()
             return response_data['result'][0]['query'], response_data['result'][0]['data'], None
         else:
-            return None, f"Get sql from superset failed with status code {response.status_code}, error message is {response.text}"
+            return None, None, f"Get sql from superset failed with status code {response.status_code}, error message is {response.text}"

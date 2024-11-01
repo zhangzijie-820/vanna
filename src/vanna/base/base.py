@@ -98,11 +98,13 @@ class VannaBase(ABC):
 
         ddl_list = self.get_related_ddl(question, **kwargs)
         doc_list = self.get_related_documentation(question, **kwargs)
+        sql_list = self.get_similar_question_sql(question, **kwargs)
 
         prompt = self.get_dimension_prompt(
             question=question,
             initial_prompt=initial_prompt,
             ddl_list=ddl_list,
+            question_sql_list=sql_list,
             doc_list=doc_list,
             **kwargs,
         )
@@ -124,26 +126,57 @@ class VannaBase(ABC):
         question: str,
         initial_prompt: str,
         ddl_list: list,
+        question_sql_list: list,
         doc_list: list,
         **kwargs,
     ):
+
         if initial_prompt is None:
             initial_prompt = """
-            ===You are an expert in converting natural language business intelligence analysis requirements into a domain-specific language (DSL). Extract metric, dimension
-            and filtering information, then output in JSON format with the following structure:
-            {"chart_type": "Recommend chart types based on metrics and dimensions", "schema_name": "schema_name", "table_name": "table_name",
-            "metrics":[{"column_name": "metric_column_name_or_subquery", "dataType": "string", "alis":"metric_column_name_or_subquery alis name"}],
-            "dimensions":[{"column_name": "dimension_column_name_or_subquery", "dataType": "string"}],
-            "order_by": {"column_name": "sorting_column_name_or_subquery", "dataType": "string"},
-            "desc": "sorting_order",
-            "limit": "limit_value",
-            "filters": {"column_name": "filter_condition_or_subquery", "dataType": "string"}}
-            ===Fields to note:
-            Ensure the JSON output strictly follows the structure and includes only
-            necessary fields based on the user's query intent.
-            The generated DSL should be directly usable in SQL without additional
-            modifications. If extraction is not possible, consider
-            generating SQL first and then extracting the information."""
+            You are an expert in converting natural language business intelligence analysis requirements into a domain-specific language (DSL). 
+            Extract metric, dimension and filtering information, then output in JSON format.
+            
+            ===Example:
+                 Question: Filter out groups where the device name is not empty, the device status is either online or offline, and the total number of such devices is greater than 5.
+                 Answer:
+                     {
+                         "chart_type": "table",
+                         "schema_name": "public",
+                         "table_name": "devices",
+                         "metrics": [
+                         {
+                             "column_name": "COUNT(device_id)",
+                             "dataType": "integer",
+                             "alis": "device_count"
+                         }
+                     ],
+                     "dimensions": [
+                         {
+                             "column_name": "group_name",
+                             "dataType": "string",
+                             "alis": "group_name"
+                         }
+                     ],
+                     "filters": [
+                         {
+                             "column_name": "(device_status = 'online' or device_status = 'offline') and device_name != ''",
+                             "alis": "device_status_filter"
+                             "operation": "where"
+                         },
+                         {
+                             "column_name": "COUNT(device_id) > 5",
+                             "alis": "device_count_filter",
+                             "operation": "having"
+                         }
+                     ],
+                     "order_by": {
+                         "column_name": "COUNT(device_id)",
+                         "alis": "device_count_order_by"
+                     },
+                     "desc": "",
+                     "limit": "",
+                 }
+            """
 
         initial_prompt = self.add_ddl_to_prompt(
             initial_prompt, ddl_list, max_tokens=self.max_tokens
@@ -158,25 +191,22 @@ class VannaBase(ABC):
 
         initial_prompt += (
               "===Response Guidelines \n"
-              "1. Accurately Understand User Intent: Carefully analyze the "
-              "natural language input from the user to accurately extract "
-              "the metric information. \n"
-              "2. Use Standard DSL Terminology: Employ common terminology "
-              "used in the BI analysis domain to describe metrics and "
-              "aggregation methods. \n"
-              "3. Maintain a Concise and Readable JSON Format: Use a clear "
-              "hierarchical structure and appropriate indentation to make "
-              "the output JSON format easy to read and understand. \n"
-              "4. Avoid Unnecessary Associations: Do not generate "
-              "dimensions, order_by, or filter conditions that are unrelated "
-              "to the user's intent.\n"
-              f"5. Provide Necessary Explanations and Clarifications: "
-              f"Include explanatory text in the output to help users "
-              f"understand the meaning of the DSL.\n"
+              "1. Accurately Understand User Intent: Carefully analyze the natural language input to accurately extract the metric information.\n"
+              "2. Do Not Add Extra Fields: Ensure the output JSON does not include any unnecessary fields."
+              "3. Based on the generated dimensions and metrics, recommend the corresponding chart_type."
         )
 
-        message_log = [self.system_message(initial_prompt),
-                       self.user_message(question)]
+        message_log = [self.system_message(initial_prompt)]
+
+        for example in question_sql_list:
+            if example is None:
+                print("example is None")
+            else:
+                if example is not None and "question" in example and "sql" in example:
+                    message_log.append(self.user_message(example["question"]))
+                    message_log.append(self.assistant_message(example["sql"]))
+
+        message_log.append(self.user_message(question))
 
         return message_log
 
