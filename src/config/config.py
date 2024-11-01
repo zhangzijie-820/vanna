@@ -1,6 +1,5 @@
 import argparse
 import configparser
-from src.vanna.superset import SuperSetConfig
 from src.vanna.superset import SuperSet_API
 
 
