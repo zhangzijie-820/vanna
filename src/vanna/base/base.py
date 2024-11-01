@@ -187,7 +187,6 @@ class VannaBase(ABC):
             initial_prompt = """
             You are an expert in converting natural language business intelligence analysis requirements into a domain-specific language (DSL). 
             Extract metric, dimension and filtering information, then output in JSON format.
-            
             ===Example:
                  Question: Filter out groups where the device name is not empty, the device status is either online or offline, and the total number of such devices is greater than 5.
                  Answer:
@@ -243,9 +242,8 @@ class VannaBase(ABC):
 
         initial_prompt += (
               "===Response Guidelines \n"
-              "1. Accurately Understand User Intent: Carefully analyze the natural language input to accurately extract the metric information.\n"
-              "2. Do Not Add Extra Fields: Ensure the output JSON does not include any unnecessary fields."
-              "3. Based on the generated dimensions and metrics, recommend the corresponding chart_type."
+              "1. Do Not Add Extra Fields: Ensure the output JSON does not include any unnecessary fields."
+              "2. Based on the generated dimensions and metrics, recommend the corresponding chart_type."
         )
 
         message_log = [self.system_message(initial_prompt)]

@@ -12,6 +12,7 @@ from src.config.config import global_superset_api
 from src.vanna.superset import SuperSetConfig
 from src.db.sql import run_sql
 from src.db.hive import HiveConnector
+from src.db.postgres import PostgresConnector
 
 
 class MyVanna(ChromaDB_VectorStore, OpenAI_Chat):
@@ -67,6 +68,15 @@ def main():
                   }
 
         vn = MyVanna(chat_config=ai_cfg, chat_client=cli,)
+        pg_connector = PostgresConnector(host=global_cfg.host, port=global_cfg.port, username=global_cfg.user, password=global_cfg.password, database=global_cfg.db)
+        pg_connector.connect()
+        df = pg_connector.get_schema_from_database()
+        pg_connector.disconnect()
+
+        print(df)
+
+        plan = vn.get_training_plan_generic(df)
+        vn.train(plan=plan)
         vn.train(documentation=sql_train)
         vn.run_sql = run_sql
         vn.run_sql_is_set = True
