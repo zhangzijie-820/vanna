@@ -142,13 +142,13 @@ class VannaFlaskAPI:
         return decorated
 
     def __init__(
-        self,
-        vn: VannaBase,
-        cache: Cache = MemoryCache(),
-        auth: AuthInterface = NoAuth(),
-        debug=True,
-        allow_llm_to_see_data=False,
-        chart=True,
+            self,
+            vn: VannaBase,
+            cache: Cache = MemoryCache(),
+            auth: AuthInterface = NoAuth(),
+            debug=True,
+            allow_llm_to_see_data=False,
+            chart=True,
     ):
         """
         Expose a Flask API that can be used to interact with a Vanna instance.
@@ -168,7 +168,7 @@ class VannaFlaskAPI:
         self.flask_app = Flask(__name__)
 
         self.swagger = Swagger(
-          self.flask_app, template={"info": {"title": "Vanna API"}}
+            self.flask_app, template={"info": {"title": "Vanna API"}}
         )
         self.sock = Sock(self.flask_app)
         self.ws_clients = []
@@ -179,9 +179,9 @@ class VannaFlaskAPI:
         self.allow_llm_to_see_data = allow_llm_to_see_data
         self.chart = chart
         self.config = {
-          "debug": debug,
-          "allow_llm_to_see_data": allow_llm_to_see_data,
-          "chart": chart,
+            "debug": debug,
+            "allow_llm_to_see_data": allow_llm_to_see_data,
+            "chart": chart,
         }
         log = logging.getLogger("werkzeug")
         log.setLevel(logging.ERROR)
@@ -427,7 +427,9 @@ class VannaFlaskAPI:
             self.cache.set(id=id, field="question", value=question)
             self.cache.set(id=id, field="sql", value=function['instantiated_sql'])
 
-            if 'instantiated_post_processing_code' in function and function['instantiated_post_processing_code'] is not None and len(function['instantiated_post_processing_code']) > 0:
+            if 'instantiated_post_processing_code' in function and function[
+                'instantiated_post_processing_code'] is not None and len(
+                    function['instantiated_post_processing_code']) > 0:
                 self.cache.set(id=id, field="plotly_code", value=function['instantiated_post_processing_code'])
 
             return jsonify(
@@ -573,7 +575,6 @@ class VannaFlaskAPI:
                     "text": fixed_sql,
                 }
             )
-
 
         @self.flask_app.route('/api/v0/update_sql', methods=['POST'])
         @self.requires_auth
@@ -1063,8 +1064,8 @@ class VannaFlaskAPI:
                 else:
                     return jsonify(
                         {
-                             "type": "error",
-                             "error": error_msg,
+                            "type": "error",
+                            "error": error_msg,
                         }
                     )
             elif db_id is None and error_msg is not None:
@@ -1153,35 +1154,35 @@ class VannaFlaskAPI:
                 },
                 "queries": [
                     {
-                         "extras": {
-                             "where": where_clause,
-                             "having": having_clause
-                         },
-                         "metrics": [
+                        "extras": {
+                            "where": where_clause,
+                            "having": having_clause
+                        },
+                        "metrics": [
                             {
                                 "expressionType": "SQL",
-                                 "sqlExpression": metric["column_name"],
-                                 "label": metric["alis"]
+                                "sqlExpression": metric["column_name"],
+                                "label": metric["alis"]
                             } for metric in metrics
-                         ],
-                         "orderby": [
-                             [
-                                 {
-                                     "expressionType": "SQL",
-                                     "sqlExpression": order_by_clause,
-                                     "label": order_by_alis,
-                                 },
-                                 desc_bool
-                             ]
-                         ] if order_by else [],
-                         "groupby": [
-                             {
-                                  "expressionType": "SQL",
-                                  "sqlExpression": dimension["column_name"],
-                                  "label": dimension["alis"],
-                             } for dimension in dimensions
-                         ],
-                         "row_limit": int(limit)
+                        ],
+                        "orderby": [
+                            [
+                                {
+                                    "expressionType": "SQL",
+                                    "sqlExpression": order_by_clause,
+                                    "label": order_by_alis,
+                                },
+                                desc_bool
+                            ]
+                        ] if order_by else [],
+                        "groupby": [
+                            {
+                                "expressionType": "SQL",
+                                "sqlExpression": dimension["column_name"],
+                                "label": dimension["alis"],
+                            } for dimension in dimensions
+                        ],
+                        "row_limit": int(limit)
                     }
                 ],
                 "result_format": "json",
@@ -1191,18 +1192,18 @@ class VannaFlaskAPI:
             if out_put_json_bool:
                 output_data["chart_type"] = chart_type
                 return jsonify(
-                   {
-                       "type": "json",
-                       "json": output_data
-                   }
-               )
+                    {
+                        "type": "json",
+                        "json": output_data
+                    }
+                )
 
             sql, data, error_msg = global_superset_api.get_sql_and_data_from_superset(output_data)
             if error_msg is not None:
                 return jsonify(
                     {
                         "type": "error",
-                         "error": error_msg,
+                        "error": error_msg,
                     }
                 )
             else:
@@ -1213,6 +1214,32 @@ class VannaFlaskAPI:
                         "sql": sql,
                     }
                 )
+
+        @self.flask_app.route("/api/v0/get_chart_type", methods=["POST"])
+        @self.requires_auth
+        def get_chart_type(user: any):
+            data = request.json
+            chart_type = flask.request.json.get("chart_type")
+
+            if chart_type is None:
+                return jsonify({"type": "error",
+                                "error": "Can not get any chart_type from request json"})
+
+            question = f"We have the chart type as {chart_type}, please provide the corresponding chart type on Superset"
+
+            superset_chart_resp = vn.generate_superset_chart_type(question=question)
+            if superset_chart_resp is None:
+                return jsonify({"type": "error",
+                                "error": "Can not get any chart_type from LLM response"})
+
+            data["chart_type"] = superset_chart_resp
+
+            return jsonify(
+                {
+                    "type": "json",
+                    "json": data
+                }
+            )
 
         @self.flask_app.route("/api/v0/generate_dimension", methods=["GET"])
         # 入口: 自然语言
@@ -1241,11 +1268,11 @@ class VannaFlaskAPI:
                 )
             else:
                 return jsonify(
-                  {
-                      "type": "json",
-                      "id": id,
-                      "json": dimension,
-                  }
+                    {
+                        "type": "json",
+                        "id": id,
+                        "json": json.loads(dimension),
+                    }
                 )
 
         @self.flask_app.route("/api/v0/generate_summary", methods=["GET"])
@@ -1299,8 +1326,8 @@ class VannaFlaskAPI:
         @self.flask_app.route("/api/v0/load_dimension", methods=["GET"])
         @self.requires_auth
         @self.requires_cache(
-          ["question"],
-          optional_fields=["dimension"]
+            ["question"],
+            optional_fields=["dimension"]
         )
         def load_dimension(user: any, id: str, question, dimension):
             try:
@@ -1447,29 +1474,29 @@ class VannaFlaskAPI:
 
 class VannaFlaskApp(VannaFlaskAPI):
     def __init__(
-        self,
-        vn: VannaBase,
-        cache: Cache = MemoryCache(),
-        auth: AuthInterface = NoAuth(),
-        debug=True,
-        allow_llm_to_see_data=False,
-        logo="https://img.vanna.ai/vanna-flask.svg",
-        title="Welcome to Vanna.AI",
-        subtitle="Your AI-powered copilot for SQL queries.",
-        show_training_data=True,
-        suggested_questions=True,
-        sql=True,
-        table=True,
-        csv_download=True,
-        chart=True,
-        redraw_chart=True,
-        auto_fix_sql=True,
-        ask_results_correct=True,
-        followup_questions=True,
-        summarization=True,
-        function_generation=True,
-        index_html_path=None,
-        assets_folder=None,
+            self,
+            vn: VannaBase,
+            cache: Cache = MemoryCache(),
+            auth: AuthInterface = NoAuth(),
+            debug=True,
+            allow_llm_to_see_data=False,
+            logo="https://img.vanna.ai/vanna-flask.svg",
+            title="Welcome to Vanna.AI",
+            subtitle="Your AI-powered copilot for SQL queries.",
+            show_training_data=True,
+            suggested_questions=True,
+            sql=True,
+            table=True,
+            csv_download=True,
+            chart=True,
+            redraw_chart=True,
+            auto_fix_sql=True,
+            ask_results_correct=True,
+            followup_questions=True,
+            summarization=True,
+            function_generation=True,
+            index_html_path=None,
+            assets_folder=None,
     ):
         """
         Expose a Flask app that can be used to interact with a Vanna instance.
@@ -1533,7 +1560,6 @@ class VannaFlaskApp(VannaFlaskAPI):
         @self.flask_app.route("/auth/logout", methods=["GET"])
         def logout():
             return self.auth.logout_handler(flask.request)
-
 
         @self.flask_app.route("/assets/<path:filename>")
         def proxy_assets(filename):

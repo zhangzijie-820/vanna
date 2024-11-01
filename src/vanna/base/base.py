@@ -109,7 +109,7 @@ class VannaBase(ABC):
             **kwargs,
         )
 
-        print("SQL prompt is:", prompt)
+        print("Get dimension prompt is:", prompt)
         llm_response = self.submit_prompt(prompt, **kwargs)
         print("get response fro LLM, response body is:",llm_response)
 
@@ -120,6 +120,58 @@ class VannaBase(ABC):
             return json_string_no_newlines
 
         return ""
+
+    def generate_superset_chart_type(self, question: str, **kwargs):
+        if self.config is not None:
+            initial_prompt = self.config.get("initial_prompt", None)
+        else:
+            initial_prompt = ""
+
+        prompt = self.get_chart_type_prompt(
+            question=question,
+            initial_prompt=initial_prompt,
+            **kwargs,
+        )
+
+        print("Get chart type prompt is:", prompt)
+        llm_response = self.submit_prompt(prompt, **kwargs)
+        print("get response fro LLM, response body is:", llm_response)
+
+        match = re.search(r'\{.*}', llm_response, re.DOTALL)
+        if match:
+            extracted_json_string = match.group(0)
+            json_string_no_newlines = extracted_json_string.replace('\n', '')
+            data = json.loads(json_string_no_newlines)
+            superset_chart_type = data["superset_chart_type"]
+            return superset_chart_type
+
+        return ""
+
+    def get_chart_type_prompt(
+            self,
+            question: str,
+            initial_prompt: str,
+            **kwargs,
+    ):
+        if initial_prompt is None:
+            initial_prompt = """
+            Given the following JSON structure that maps chart type names to their corresponding Superset chart types:
+            {"echarts_timeseries_line": {"key": "echarts_timeseries_bar","name": "Line Chart","alias": [ "Line", "Lines" ],"category": "Evolution",
+             "description": "Line chart is used to visualize measurements taken over a given category. Line chart is a type of chart which displays information as a series of data points connected by straight line segments. It is a basic type of chart common in many fields."},
+             "echarts_timeseries_bar": {"key": "echarts_timeseries_bar","name": "Bar Chart","alias": [ "Bars", "Bar" ],"category": "Evolution",
+             "description": "Bar Charts are used to show metrics as a series of bars."},
+             "pie": {"key": "pie","name": "Pie Chart","alias": [ "Circle Chart", "Pie" ],"category": "Part of a Whole",
+             "description": "The classic. Great for showing how much of a company each investor gets, what demographics follow your blog, or what portion of the budget goes to the military industrial complex. Pie charts can be difficult to interpret precisely. If clarity of relative proportion is important, consider using a bar or other chart type instead."},
+             "table": {"key": "table","name": "Table","alias": [ ],"category": "Table","description": "Classic row-by-column spreadsheet like view of a dataset. Use tables to showcase a view into the underlying data or to show aggregated metrics."},
+             "pivot_table_v2": {"key": "pivot_table_v2","name": "Pivot Table","alias": [ ],"category": "Table",
+             "description": "Used to summarize a set of data by grouping together multiple statistics along two axes. Examples: Sales numbers by region and month, tasks by status and assignee, active users by age and location. Not the most visually stunning visualization, but highly informative and versatile."}}
+             Please identify the corresponding Superset chart type for the user-provided chart type name. The output should be in JSON format, with the key superset_chart_type and the value being the matching Superset chart type. For example, if the user inputs 'line', the output should be:
+             {"superset_chart_type": "echarts_timeseries_line"}
+            """
+
+            message_log = [self.system_message(initial_prompt), self.user_message(question)]
+
+            return message_log
 
     def get_dimension_prompt(
         self,
